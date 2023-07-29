@@ -1,4 +1,6 @@
 model:
+  base_learning_rate: 6.0e-05 # 1.5e-04
+  scale_lr: False
   target: lvdm.models.ddpm3d.LatentDiffusion
   params:
     linear_start: 0.00085
@@ -9,15 +11,16 @@ model:
     first_stage_key: video
     cond_stage_key: caption
     image_size:
-    - 32
-    - 32
+    - 16
+    - 16
     video_length: 16
     channels: 4
-    cond_stage_trainable: false
+    cond_stage_trainable: True
     conditioning_key: crossattn
     scale_by_std: false
     scale_factor: 0.18215
     use_ema: false
+    encoder_type: 2d
 
     unet_config:
       target: lvdm.models.modules.openaimodel3d.UNetModel
@@ -69,6 +72,58 @@ model:
           dropout: 0.0
         lossconfig:
           target: torch.nn.Identity
+      # target: lvdm.models.autoencoder3d.AutoencoderKL
+      # params:
+      #   ckpt_path: ${ckpt_path}
+      #   monitor: "val/rec_loss"
+      #   embed_dim: 4
+      #   lossconfig: __is_first_stage__
+      #   ddconfig:
+      #     double_z: True
+      #     z_channels: 4
+      #     encoder:
+      #       target: lvdm.models.modules.aemodules3d.Encoder
+      #       params:
+      #         n_hiddens: 32
+      #         downsample: [4, 8, 8]
+      #         image_channel: 3
+      #         norm_type: group
+      #         padding_type: replicate
+      #         double_z: True
+      #         z_channels: 4
+      #     decoder:
+      #       target: lvdm.models.modules.aemodules3d.Decoder
+      #       params:
+      #         n_hiddens: 32
+      #         upsample: [4, 8, 8]
+      #         z_channels: 4
+      #         image_channel: 3
+      #         norm_type: group
 
     cond_stage_config:
       target: lvdm.models.modules.condition_modules.FrozenCLIPEmbedder
+    img_cond_stage_config:
+      target: lvdm.models.modules.condition_modules.CLIPVisionEmbedder
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 3
+    num_workers: 1
+    wrap: false
+    train:
+      target: lvdm.data.storydata.StoryData
+      params:
+        data_root: data_root
+        resolution: 128
+        video_length: 16
+        subset_split: train
+        frame_stride: 4
+    validation:
+      target: lvdm.data.storydata.StoryData
+      params:
+        data_root: data_root
+        resolution: 128
+        video_length: 16
+        subset_split: test
+        frame_stride: 4

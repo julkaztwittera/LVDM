@@ -2,6 +2,7 @@ import os
 import yaml
 import numpy as np
 from PIL import Image
+from copy import deepcopy
 
 import torch
 
@@ -41,6 +42,7 @@ def load_model(config, ckpt_path, gpu_id=None):
     
     # load sd
     pl_sd = torch.load(ckpt_path, map_location="cpu")
+    
     try:
         global_step = pl_sd["global_step"]
         epoch = pl_sd["epoch"]
@@ -53,7 +55,31 @@ def load_model(config, ckpt_path, gpu_id=None):
         sd = pl_sd["state_dict"]
     except:
         sd = pl_sd
+
     model = instantiate_from_config(config.model)
+
+    # breakpoint()
+    # if model.cond_stage_vision_model in globals():
+    vision_model_sd = deepcopy(model.cond_stage_vision_model.state_dict())
+    for k, v in zip(vision_model_sd.keys(), vision_model_sd.values()):
+        sd["cond_stage_vision_model." + k] = v
+
+    cond_stage_model_sd = deepcopy(model.cond_stage_model.state_dict())
+    for k, v in zip(cond_stage_model_sd.keys(), cond_stage_model_sd.values()):
+        sd["cond_stage_model." + k] = v
+
+    # first_stage_model_sd = deepcopy(model.first_stage_model.state_dict())
+    # sd_keys = list(sd)
+    # for k in sd_keys:
+    #     if "first_stage_model" not in k:
+    #         continue
+    #     sd.pop(k)
+    # for k, v in zip(first_stage_model_sd.keys(), first_stage_model_sd.values()):
+    #     sd["first_stage_model." + k] = v
+
+    # sd["encoder_type"] = model.encoder_type
+
+
     model.load_state_dict(sd, strict=True)
 
     # move to device & eval
@@ -185,6 +211,7 @@ def save_results(videos, save_dir,
         os.makedirs(save_subdir, exist_ok=True)
         shape_str = "x".join([str(x) for x in videos[0:1,...].shape])
         for i in range(videos.shape[0]):
+            # breakpoint()
             npz_to_video_grid(videos[i:i+1,...], 
                               os.path.join(save_subdir, f"{save_name}_{i:03d}_{shape_str}.mp4"), 
                               fps=save_fps)

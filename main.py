@@ -16,6 +16,7 @@ from pytorch_lightning.plugins import DDPPlugin
 
 from lvdm.utils.common_utils import instantiate_from_config, str2bool
 from lvdm.utils.log import set_ptl_logger
+from scripts.sample_utils import load_model
 
 # if int((pl.__version__).split('.')[1])>=7:
 #     from pytorch_lightning.strategies import DDPStrategy,DDPShardedStrategy
@@ -245,16 +246,20 @@ if __name__ == "__main__":
         lightning_config.trainer = trainer_config
 
         # model
-        config.model['ckptdir'] = ckptdir
-        config.model.params['logdir'] = logdir
-        model = instantiate_from_config(config.model)
+        #config.model['ckptdir'] = ckptdir
         
+        # config.model.params.pop("first_stage_config", OmegaConf.create())
+        #model = instantiate_from_config(config.model)
+        #config.model.params['logdir'] = logdir
         # ckpt
         if opt.load_from_checkpoint:
             config.model.load_from_checkpoint = opt.load_from_checkpoint
         if "load_from_checkpoint" in config.model and config.model.load_from_checkpoint and not resume:
             try:
-                model = model.load_from_checkpoint(config.model.load_from_checkpoint, **config.model.params)
+                #model = model.load_from_checkpoint(config.model.load_from_checkpoint, **config.model.params)
+                model, _, _ = load_model(config, config.model.load_from_checkpoint)
+                print("model loaded")
+                # breakpoint()
             except:
                 # avoid size mismatch
                 # gpu_id = opt.gpus.split(",")[0]

@@ -145,7 +145,7 @@ class DDIMSampler(object):
             img = torch.randn(shape, device=device)
         else:
             img = x_T
-        
+
         if timesteps is None:
             timesteps = self.ddpm_num_timesteps if ddim_use_original_steps else self.ddim_timesteps
         elif timesteps is not None and not ddim_use_original_steps:
@@ -165,7 +165,7 @@ class DDIMSampler(object):
 
             if postprocess_fn is not None:
                 img = postprocess_fn(img, ts)
-            
+
             outs = self.p_sample_ddim(img, cond, ts, index=index, use_original_steps=ddim_use_original_steps,
                                       quantize_denoised=quantize_denoised, temperature=temperature,
                                       noise_dropout=noise_dropout, score_corrector=score_corrector,
@@ -205,6 +205,10 @@ class DDIMSampler(object):
             is_video = True
         else:
             is_video = False
+
+        # first_frame_encoded = kwargs["first_frame_encoded"]
+        # x[:,:,0] = first_frame_encoded
+
         if unconditional_conditioning is None or unconditional_guidance_scale == 1.:
             e_t = self.model.apply_model(x, t, c, **kwargs) # unet denoiser
         else:

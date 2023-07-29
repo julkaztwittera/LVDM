@@ -121,6 +121,59 @@ def make_dataset(dir, nframes, class_to_idx, frame_stride=1, **kwargs):
     print('number of short videos', len(clips))
     return clips, videos
 
+def make_dataset_pororo(dir, nframes, class_to_idx, frame_stride=1, **kwargs):
+    """
+    videos are saved in second-level directory:
+    dir: video dir. Format:
+        videoxxx_1
+            frame1.jpg
+            frame2.jpg
+        videoxxx_2
+            frame1.jpg
+            ...
+        
+    nframes: num of frames of every video clips
+    class_to_idx: for mapping video name to video id
+    """
+    if frame_stride != 1:
+        raise NotImplementedError
+    
+    clips = []
+    videos = []
+    n_clip = 0
+    video_frames = []
+    for video_name in sorted(os.listdir(dir)):
+        if os.path.isdir(os.path.join(dir,video_name)):
+            # eg: dir + '/rM7aPu9WV2Q'
+            subfolder_path = os.path.join(dir, video_name) # video_name: rM7aPu9WV2Q
+            filenames = os.listdir(subfolder_path)
+            filenames = [n.split(".")[0].zfill(3) + "." + n.split(".")[1] for n in filenames]
+            clip_frames = []
+            i = 1
+            # traverse frames in one video
+            for fname in sorted(filenames):
+                # fname = fname.lstrip('0')
+                if is_image_file(fname):
+                    img_path = os.path.join(subfolder_path, fname) # eg: dir + '/rM7aPu9WV2Q/rM7aPu9WV2Q_1/rM7aPu9WV2Q_frames_00086552.jpg'
+                    frame_info = (img_path, class_to_idx[video_name]) #(img_path, video_id)
+                    clip_frames.append(frame_info)
+                    video_frames.append(frame_info)
+                    
+                    # append clips, clip_step=n_frames (no frame overlap between clips).
+                    if i % nframes == 0 and i >0:
+                        clips.append(clip_frames)
+                        n_clip += 1
+                        clip_frames = []
+                    i = i+1
+            
+            if len(video_frames) >= nframes:
+                videos.append(video_frames)
+            video_frames = []
+
+    print('number of long videos:', len(videos))
+    print('number of short videos', len(clips))
+    return clips, videos
+
 def split_by_captical(s):
     s_list = re.sub( r"([A-Z])", r" \1", s).split()
     string = ""
@@ -245,7 +298,7 @@ class VideoFrameDataset(data.Dataset):
                 annotation_dir = os.path.join(data_root, "ucfTrainTestlist")
             class_to_idx = class_name_to_idx(annotation_dir)
             assert(len(class_to_idx) == 101), f'num of classes = {len(class_to_idx)}, not 101'
-        elif dataset_name == 'sky':
+        elif dataset_name in ['sky', 'pororo_unconditional', 'pororo', 'flintstones']:
             classes, class_to_idx = find_classes(video_dir)
         else:
             class_to_idx = None
@@ -253,6 +306,8 @@ class VideoFrameDataset(data.Dataset):
         # make dataset
         if dataset_name == 'UCF-101':
             func = make_dataset_ucf
+        elif dataset_name in ['pororo_unconditional', 'pororo', 'flintstones']:
+            func = make_dataset_pororo
         else:
             func = make_dataset
         self.clips, self.videos = func(video_dir, video_length,  class_to_idx, frame_stride=frame_stride, clip_step=clip_step)

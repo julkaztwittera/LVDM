@@ -48,8 +48,16 @@ class ImageLogger(Callback):
 
         for k in images:
             tag = f"{split}/{k}"
-            if images[k].dim() == 5:
-                video = images[k]
+            imagesk = images[k]
+            # try:
+            #     d = imagesk.dim()
+            # except:
+            #     breakpoint()
+            if k == "conditioning_txt":
+                continue
+            # breakpoint()
+            if imagesk.dim() == 5:
+                video = imagesk
                 n = video.shape[0]
                 video = video.permute(2, 0, 1, 3, 4)
                 frame_grids = [torchvision.utils.make_grid(framesheet, nrow=int(np.sqrt(n))) for framesheet in video]
@@ -60,7 +68,7 @@ class ImageLogger(Callback):
                     tag, grid,
                     global_step=pl_module.global_step)
             else:
-                grid = torchvision.utils.make_grid(images[k])
+                grid = torchvision.utils.make_grid(imagesk)
                 grid = (grid + 1.0) / 2.0
                 pl_module.logger.experiment.add_image(
                     tag, grid,
@@ -215,8 +223,8 @@ class ImageLogger(Callback):
             self.log_img(pl_module, batch, batch_idx, split="train", rank=trainer.global_rank)
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=None):
-        if not self.disabled and pl_module.global_step > 0:
-            self.log_img(pl_module, batch, batch_idx, split="val", rank=trainer.global_rank)
+        # if not self.disabled and pl_module.global_step > 0:
+        self.log_img(pl_module, batch, batch_idx, split="val", rank=trainer.global_rank)
         if hasattr(pl_module, 'calibrate_grad_norm'):
             if (pl_module.calibrate_grad_norm and batch_idx % 25 == 0) and batch_idx > 0:
                 self.log_gradients(trainer, pl_module, batch_idx=batch_idx)
